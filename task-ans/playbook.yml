@@ -1,0 +1,71 @@
+---
+- hosts: all
+  become: true
+  vars_files:
+    - vars/default.yml
+  
+  tasks:
+    - name: Install aptitude
+      apt: name={{ item }} update_cache=yes state=latest force_apt_get=yes
+      loop: [ 'aptitude' ]
+    - name: Install NGINX/ZSH/WGET Packages
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: [ 'nginx', 'zsh', 'wget' ]
+    - name: Add Github SSH key
+      copy: >
+        src=files/andreys-gitinsky.github
+        dest=/root/.ssh/andreys-gitinsky.github
+        owner=root
+        group=root
+        mode=600
+    - name: Configure SSH to use Ansible key to access Github
+      template: >
+        src=templates/ssh_config.j2
+        dest=/root/.ssh/config
+        owner=root
+        group=root
+        mode=0644
+    - name: Clone privte repository containing HTML Under Construction Page
+      git: >
+        repo=ssh://git@github.com/astepanchak/gitinsky.git
+        key_file=/root/.ssh/andreys-gitinsky.github
+        dest=/root/repos
+    - name: Copy under construction page to doc root
+      copy:
+        src: /root/repos/html/maint.html
+        dest: /var/www/html/
+        remote_src: yes
+    - name: Set NGINX configuration
+      template:
+        src: templates/nginx.conf.j2
+        dest: "/etc/nginx/conf.d/{{ http_conf }}"
+      notify: Reload Nginx
+    - name: Setup some sysctl parameters
+      sysctl:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+        ignoreerrors: yes
+      with_dict: '{{ sysctl_config }}'
+    - name: Generate two SSH keys for root
+      openssh_keypair:
+        path: /root/.ssh/{{ item.value }}
+        size: 2048
+        type: rsa
+        force: True
+      with_dict: '{{ ssh_keys }}'
+
+# Handlers
+
+  handlers:
+    - name: Reload Nginx
+      service:
+       name: nginx
+       state: reloaded
+
+    - name: Restart Nginx
+      service:
+       name: nginx
+       state: restarted

@@ -1,0 +1,16 @@
+server {
+        listen      80;
+        server_name u16srv-gitinsky;
+        root    /var/www/html/;
+
+        location / {
+            if (-f $document_root/maint.html) {
+                return 503;
+           }
+         }
+
+        error_page 503 @maintenance;
+        location @maintenance {
+                rewrite ^(.*)$ /maint.html break;
+        }
+}

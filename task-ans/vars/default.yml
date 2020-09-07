@@ -1,0 +1,10 @@
+---
+http_host: "u16srv-gitinsky"
+http_conf: "gitinsky.conf"
+http_port: "80"
+sysctl_config:
+  fs.file-max: 1204000
+  net.core.somaxconn: 65535
+ssh_keys:
+  key1: gitinsky-key1
+  key2: gitinsky-key2
